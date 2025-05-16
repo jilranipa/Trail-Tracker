@@ -105,7 +105,7 @@ const TrailTrackerPage: NextPage = () => {
             toast({ title: "Geolocation Error", description: error.message, variant: "destructive" });
             setIsTracking(false); 
           },
-          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+          { enableHighAccuracy: true, timeout: 1000, maximumAge: 0 }
         );
       },
       (error) => {

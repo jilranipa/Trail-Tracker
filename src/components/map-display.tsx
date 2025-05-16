@@ -36,7 +36,8 @@ interface MapDisplayProps {
 const MapUpdater: FC<{ center: LatLngExpression; zoom: number }> = ({ center, zoom }) => {
   const map = useMap();
   useEffect(() => {
-    map.setView(center, zoom);
+    // map.setView(center, zoom);
+    map.panTo(center);
   }, [center, zoom, map]);
   return null;
 };
