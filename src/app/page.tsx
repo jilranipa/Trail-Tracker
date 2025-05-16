@@ -204,11 +204,11 @@ const TrailTrackerPage: NextPage = () => {
     <div className="relative h-screen w-screen overflow-hidden bg-background">
       {/* Controls and header overlayed above the map */}
       <div className="fixed top-0 left-0 w-full z-30 pointer-events-none">
-        <div className="flex flex-col w-full">
-          <div className="bg-background/80 p-3 rounded-lg shadow-lg w-fit mt-4 ml-4 pointer-events-auto">
+        <div className="flex flex-col w-full ml-1">
+          <div className="bg-background/80 p-3 rounded-lg shadow-lg w-fit mt-4 ml-10 pointer-events-auto">
             <h1 className="text-2xl font-bold text-primary">Trail Tracker</h1>
           </div>
-          <div className="flex gap-2 justify-end w-full px-4 mt-2 pointer-events-auto">
+          <div className="flex gap-2 justify-end w-full px-4 pointer-events-auto">
             {!isTracking ? (
               <Button onClick={handleStartTracking} className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md">
                 <Play className="mr-2 h-5 w-5" /> Start Tracking
