@@ -38,6 +38,9 @@ const TrailTrackerPage: NextPage = () => {
   const [selectedTrail, setSelectedTrail] = useState<Trail | null>(null);
   const [playbackProgress, setPlaybackProgress] = useState(0); // 0-100
   const [playbackMarkerPosition, setPlaybackMarkerPosition] = useState<GeoPoint | null>(null);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1); // 1x to 5x
+  const [isPlaying, setIsPlaying] = useState(false);
+  const playbackIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   
@@ -176,6 +179,41 @@ const TrailTrackerPage: NextPage = () => {
     setCurrentPosition(null);
   }, [currentPath, storedTrails, toast]);
 
+  // Playback effect
+  useEffect(() => {
+    if (!selectedTrail || !isPlaying) {
+      if (playbackIntervalRef.current) {
+        clearInterval(playbackIntervalRef.current);
+        playbackIntervalRef.current = null;
+      }
+      return;
+    }
+    const path = selectedTrail.path;
+    let index = Math.floor((playbackProgress / 100) * (path.length - 1));
+    playbackIntervalRef.current = setInterval(() => {
+      index += 1;
+      if (index >= path.length) {
+        setIsPlaying(false);
+        setPlaybackProgress(100);
+        setPlaybackMarkerPosition(path[path.length - 1]);
+        clearInterval(playbackIntervalRef.current!);
+        playbackIntervalRef.current = null;
+        return;
+      }
+      const progress = (index / (path.length - 1)) * 100;
+      setPlaybackProgress(progress);
+      setPlaybackMarkerPosition(path[index]);
+      setMapCenter([path[index].lat, path[index].lng]);
+    }, 1000 / playbackSpeed);
+    return () => {
+      if (playbackIntervalRef.current) {
+        clearInterval(playbackIntervalRef.current);
+        playbackIntervalRef.current = null;
+      }
+    };
+  }, [selectedTrail, isPlaying, playbackSpeed]);
+
+  // When user selects a new trail, reset playback state
   const handleSelectTrail = useCallback((trail: Trail) => {
     if (isTracking) {
       handleStopTracking(); 
@@ -185,6 +223,8 @@ const TrailTrackerPage: NextPage = () => {
     setMapZoom(TRACKING_ZOOM); 
     setPlaybackProgress(0);
     setPlaybackMarkerPosition(trail.path[0]);
+    setIsPlaying(false);
+    setPlaybackSpeed(1);
     setShowHistoryModal(false);
     toast({ title: "Trail Selected", description: `Viewing ${trail.name}` });
   }, [isTracking, handleStopTracking, toast]);
@@ -283,14 +323,29 @@ const TrailTrackerPage: NextPage = () => {
             <span className="flex items-center"><Route size={14} className="mr-1"/> {formatDuration(selectedTrail.endTime - selectedTrail.startTime)}</span>
             <span className="flex items-center"><Ruler size={14} className="mr-1"/> {formatTrailDistance(selectedTrail.distance)}</span>
           </div>
-          <Slider
-            min={0}
-            max={100}
-            step={0.1}
-            value={[playbackProgress]}
-            onValueChange={handlePlaybackProgressChange}
-            className="[&>span:first-child]:h-1 [&_[role=slider]]:bg-accent [&_[role=slider]]:w-4 [&_[role=slider]]:h-4 [&_[role=slider]]:border-2"
-          />
+          <div className="flex items-center gap-2 mb-2">
+            <Button size="icon" variant="outline" onClick={() => setIsPlaying(p => !p)}>
+              {isPlaying ? <Square className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+            </Button>
+            <span className="text-xs">Speed:</span>
+            <select
+              className="border rounded px-1 py-0.5 text-xs bg-background"
+              value={playbackSpeed}
+              onChange={e => setPlaybackSpeed(Number(e.target.value))}
+            >
+              {[1,2,3,4,5].map(s => (
+                <option key={s} value={s}>{s}x</option>
+              ))}
+            </select>
+            <Slider
+              min={0}
+              max={100}
+              step={0.1}
+              value={[playbackProgress]}
+              onValueChange={handlePlaybackProgressChange}
+              className="flex-1 mx-2 [&>span:first-child]:h-1 [&_[role=slider]]:bg-accent [&_[role=slider]]:w-4 [&_[role=slider]]:h-4 [&_[role=slider]]:border-2"
+            />
+          </div>
           <p className="text-center text-xs text-muted-foreground mt-1">
             {playbackMarkerPosition ? `${format(new Date(playbackMarkerPosition.timestamp), "HH:mm:ss")}` : 'Adjust slider to view path points'}
           </p>
