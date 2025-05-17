@@ -188,23 +188,34 @@ const TrailTrackerPage: NextPage = () => {
       }
       return;
     }
+
     const path = selectedTrail.path;
-    let index = Math.floor((playbackProgress / 100) * (path.length - 1));
+    const totalDuration = path[path.length - 1].timestamp - path[0].timestamp;
+
+    const startTime = Date.now();
+    const trailStartTime = path[0].timestamp;
+
     playbackIntervalRef.current = setInterval(() => {
-      index += 1;
-      if (index >= path.length) {
-        setIsPlaying(false);
+      const elapsed = (Date.now() - startTime) * playbackSpeed;
+      const currentTime = trailStartTime + elapsed;
+
+      const nextPointIndex = path.findIndex(p => p.timestamp > currentTime);
+
+      if (nextPointIndex === -1) {
         setPlaybackProgress(100);
         setPlaybackMarkerPosition(path[path.length - 1]);
+        setIsPlaying(false);
         clearInterval(playbackIntervalRef.current!);
         playbackIntervalRef.current = null;
         return;
       }
-      const progress = (index / (path.length - 1)) * 100;
-      setPlaybackProgress(progress);
-      setPlaybackMarkerPosition(path[index]);
-      setMapCenter([path[index].lat, path[index].lng]);
-    }, 1000 / playbackSpeed);
+
+      const point = path[Math.max(0, nextPointIndex - 1)];
+      setPlaybackMarkerPosition(point);
+      setPlaybackProgress(((point.timestamp - trailStartTime) / totalDuration) * 100);
+      setMapCenter([point.lat, point.lng]);
+    }, 100); // Update roughly every 100ms
+
     return () => {
       if (playbackIntervalRef.current) {
         clearInterval(playbackIntervalRef.current);
