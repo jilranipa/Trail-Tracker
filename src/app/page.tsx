@@ -121,7 +121,7 @@ const TrailTrackerPage: NextPage = () => {
             const distanceMoved = lastPoint
                 ? getDistanceMeters(lastPoint.lat, lastPoint.lng, newLat, newLng)
                 : Infinity;
-            if (timePassed >= 5000 && distanceMoved >= 10) {
+            if (timePassed >= 2500 && distanceMoved >= 10) {
               setCurrentPosition(newPoint);
               setCurrentPath((prevPath) => [...prevPath, newPoint]);
               setMapCenter([newLat, newLng]);
