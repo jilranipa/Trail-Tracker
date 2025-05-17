@@ -26,7 +26,9 @@ const TrailTrackerPage: NextPage = () => {
   const { toast } = useToast();
   const [mapCenter, setMapCenter] = useState<[number, number]>(DEFAULT_CENTER);
   const [mapZoom, setMapZoom] = useState(DEFAULT_ZOOM);
-
+  const lastUpdateTimeRef = useRef<number>(0);
+  const lastPositionRef = useRef<GeoPoint | null>(null);
+  
   const [currentPosition, setCurrentPosition] = useState<GeoPoint | null>(null);
   const [currentPath, setCurrentPath] = useState<GeoPoint[]>([]);
   const [isTracking, setIsTracking] = useState(false);
@@ -87,18 +89,48 @@ const TrailTrackerPage: NextPage = () => {
         setMapZoom(TRACKING_ZOOM);
         setIsTracking(true);
         toast({ title: "Tracking Started", description: "Your path is now being recorded." });
+        
+        function getDistanceMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+          const R = 6371000; // Radius of Earth in meters
+          const toRad = (deg: number) => deg * (Math.PI / 180);
+          const dLat = toRad(lat2 - lat1);
+          const dLng = toRad(lng2 - lng1);
+          const a =
+            Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          return R * c;
+        }
 
         watchIdRef.current = navigator.geolocation.watchPosition(
           (pos) => {
+            const now = Date.now();
+            const newLat = pos.coords.latitude;
+            const newLng = pos.coords.longitude;
+
             const newPoint: GeoPoint = {
-              lat: pos.coords.latitude,
-              lng: pos.coords.longitude,
-              timestamp: Date.now(),
+              lat: newLat,
+              lng: newLng,
+              timestamp: now,
             };
-            setCurrentPosition(newPoint);
-            setCurrentPath((prevPath) => [...prevPath, newPoint]);
-            setMapCenter([newPoint.lat, newPoint.lng]);
-            console.log("New position:", newPoint);
+
+            const lastPoint = lastPositionRef.current;
+            const lastTime = lastUpdateTimeRef.current;
+
+            const timePassed = now - lastTime;
+            const distanceMoved = lastPoint
+                ? getDistanceMeters(lastPoint.lat, lastPoint.lng, newLat, newLng)
+                : Infinity;
+            if (timePassed >= 5000 && distanceMoved >= 10) {
+              setCurrentPosition(newPoint);
+              setCurrentPath((prevPath) => [...prevPath, newPoint]);
+              setMapCenter([newLat, newLng]);
+              console.log("New filtered position:", newPoint);
+              lastUpdateTimeRef.current = now;
+              lastPositionRef.current = newPoint;
+            } else {
+              console.log("Skipped position - too soon or too close");
+            }
           },
           (error) => {
             console.error("Error watching position:", error);
@@ -203,22 +235,30 @@ const TrailTrackerPage: NextPage = () => {
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-background">
       {/* Controls and header overlayed above the map */}
-      <div className="fixed top-0 left-0 w-full z-30 pointer-events-none">
-        <div className="flex flex-col w-full ml-1">
-          <div className="bg-background/80 p-3 rounded-lg shadow-lg w-fit mt-4 ml-10 pointer-events-auto">
-            <h1 className="text-2xl font-bold text-primary">Trail Tracker</h1>
-          </div>
-          <div className="flex gap-2 justify-end w-full px-4 pointer-events-auto">
+      <div className="fixed top-0 right-0 z-30 pointer-events-none">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-end px-2 sm:px-4 mt-2 sm:mt-4 pointer-events-auto gap-2 max-w-fit">
+          <div className="flex gap-2 flex-wrap justify-end sm:w-auto">
             {!isTracking ? (
-              <Button onClick={handleStartTracking} className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md">
+              <Button
+                onClick={handleStartTracking}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md sm:w-auto"
+              >
                 <Play className="mr-2 h-5 w-5" /> Start Tracking
               </Button>
             ) : (
-              <Button onClick={handleStopTracking} variant="destructive" className="shadow-md">
+              <Button
+                onClick={handleStopTracking}
+                variant="destructive"
+                className="shadow-md sm:w-auto"
+              >
                 <Square className="mr-2 h-5 w-5" /> Stop Tracking
               </Button>
             )}
-            <Button variant="secondary" onClick={() => setShowHistoryModal(true)} className="shadow-md">
+            <Button
+              variant="secondary"
+              onClick={() => setShowHistoryModal(true)}
+              className="shadow-md sm:w-auto"
+            >
               <History className="mr-2 h-5 w-5" /> Past Trails
             </Button>
           </div>
@@ -236,9 +276,9 @@ const TrailTrackerPage: NextPage = () => {
       </div>
       {/* Trail info and slider overlayed above the map */}
       {selectedTrail && (
-        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 w-11/12 max-w-2xl z-40 p-4 bg-background/90 rounded-xl shadow-2xl backdrop-blur-sm pointer-events-auto">
-          <h3 className="text-lg font-semibold text-foreground mb-1 truncate">{selectedTrail.name}</h3>
-          <div className="flex items-center text-xs text-muted-foreground mb-2 space-x-3">
+        <div className="fixed bottom-2 left-1/2 transform -translate-x-1/2 w-11/12 max-w-2xl z-40 p-2 sm:p-4 bg-background/90 rounded-xl shadow-2xl backdrop-blur-sm pointer-events-auto">
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-1 truncate">{selectedTrail.name}</h3>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center text-xs text-muted-foreground mb-2 space-y-1 sm:space-y-0 sm:space-x-3">
             <span className="flex items-center"><CalendarClock size={14} className="mr-1"/> {format(new Date(selectedTrail.startTime), "PPp")}</span>
             <span className="flex items-center"><Route size={14} className="mr-1"/> {formatDuration(selectedTrail.endTime - selectedTrail.startTime)}</span>
             <span className="flex items-center"><Ruler size={14} className="mr-1"/> {formatTrailDistance(selectedTrail.distance)}</span>
@@ -265,9 +305,21 @@ const TrailTrackerPage: NextPage = () => {
         onDeleteTrail={handleDeleteTrail}
       />
       {/* Toast overlayed above everything */}
-      <div className="fixed top-6 right-6 z-[9999] pointer-events-none">
+      <div className="fixed top-2 right-2 sm:top-6 sm:right-6 z-[9999] pointer-events-none">
         <Toaster />
       </div>
+      {/* Title at bottom right */}
+      <div className="fixed bottom-2 right-2 sm:bottom-4 sm:right-6 z-50 pointer-events-none">
+        <div className="bg-background/80 px-3 py-2 rounded-lg shadow-lg text-xs sm:text-base font-bold text-primary pointer-events-auto">
+          Trail Tracker
+        </div>
+      </div>
+      {/* Hide Leaflet copyright */}
+      <style jsx global>{`
+        .leaflet-bottom.leaflet-right {
+          display: none !important;
+        }
+      `}</style>
     </div>
   );
 };
