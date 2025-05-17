@@ -333,7 +333,7 @@ const TrailTrackerPage: NextPage = () => {
               value={playbackSpeed}
               onChange={e => setPlaybackSpeed(Number(e.target.value))}
             >
-              {[1,2,3,4,5].map(s => (
+              {[1,2,3,4,5,6,7,8,9,10].map(s => (
                 <option key={s} value={s}>{s}x</option>
               ))}
             </select>
