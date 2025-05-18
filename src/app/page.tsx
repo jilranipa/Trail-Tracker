@@ -216,8 +216,8 @@ const TrailTrackerPage: NextPage = () => {
       />
 
       {/* Toast overlayed above everything */}
-      <div className="fixed top-2 right-2 sm:top-6 sm:right-6 z-[9999] pointer-events-none">
-        <Toaster />
+      <div className="fixed top-4 right-4 sm:top-6 sm:right-6 z-[9999] pointer-events-none">
+        <Toaster position="top-right" />
       </div>
 
       {/* Title at bottom right */}

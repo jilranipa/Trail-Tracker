@@ -1,10 +1,9 @@
-
 "use client";
 
 import type { GeoPoint } from "@/types";
 import type { FC } from "react";
-import { useEffect, useMemo } from "react"; // Correctly import useMemo and useEffect
-import { MapContainer, TileLayer, Polyline, CircleMarker, useMap, Tooltip } from "react-leaflet";
+import { useEffect, useMemo } from "react";
+import { MapContainer, TileLayer, Polyline, CircleMarker, Tooltip, useMap } from "react-leaflet";
 import type { LatLngExpression } from "leaflet";
 import L from 'leaflet';
 
@@ -36,8 +35,7 @@ interface MapDisplayProps {
 const MapUpdater: FC<{ center: LatLngExpression; zoom: number }> = ({ center, zoom }) => {
   const map = useMap();
   useEffect(() => {
-    // map.setView(center, zoom);
-    map.panTo(center);
+    map.setView(center, zoom, { animate: true, duration: 1 });
   }, [center, zoom, map]);
   return null;
 };
@@ -70,7 +68,9 @@ const MapDisplay: FC<MapDisplayProps> = ({
       center={center}
       zoom={zoom}
       style={containerStyle}
-      scrollWheelZoom={true}
+      scrollWheelZoom={false}
+      dragging={true}
+      className="z-0"
     >
       <MapUpdater center={center} zoom={zoom} />
       <TileLayer
@@ -78,7 +78,14 @@ const MapDisplay: FC<MapDisplayProps> = ({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       {polylinePositions.length > 0 && (
-        <Polyline positions={polylinePositions} pathOptions={{ color: pathColor, weight: 5, opacity: 0.8 }} />
+        <Polyline 
+          positions={polylinePositions} 
+          pathOptions={{ 
+            color: pathColor, 
+            weight: 5, 
+            opacity: 0.8 
+          }} 
+        />
       )}
       {markerPosition && (
         <CircleMarker
@@ -91,7 +98,13 @@ const MapDisplay: FC<MapDisplayProps> = ({
             fillOpacity: 1,
           }}
         >
-           <Tooltip permanent direction="top" offset={[0, -10]} opacity={0.8}>
+          <Tooltip 
+            permanent 
+            direction="top" 
+            offset={[0, -10]} 
+            opacity={0.8}
+            className="bg-background/80 px-2 py-1 text-xs rounded shadow"
+          >
             Current Position
           </Tooltip>
         </CircleMarker>

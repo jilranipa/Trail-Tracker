@@ -43,16 +43,19 @@ export function TrackingControls({
         onStartTracking();
 
         navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const initialPos: GeoPoint = {
+            (position) => {                const initialPos: GeoPoint = {
                     lat: position.coords.latitude,
                     lng: position.coords.longitude,
                     timestamp: Date.now(),
                 };
-                onPositionUpdate(initialPos);
-                onPathUpdate(() => [initialPos]);
+                // Force immediate center and zoom update
                 onCenterChange([initialPos.lat, initialPos.lng]);
                 onZoomChange(TRACKING_ZOOM);
+                // Short delay to ensure map has updated
+                setTimeout(() => {
+                    onPositionUpdate(initialPos);
+                    onPathUpdate(() => [initialPos]);
+                }, 100);
 
                 function getDistanceMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
                     const R = 6371000;
